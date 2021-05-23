@@ -18,15 +18,16 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Shashwat Dalakoti
+title: JdeRobot
 email: shash.dal623@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Welcome to the official blog for my GSoC'2021 project under JdeRobot  
 baseurl: "/gsoc2021-Shashwat_Dalakoti/" # the subpath of your site, e.g. /blog
 url: "https://shashwat623.github.io" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: shashwat@623
+linkedin_username : shashwat623
 github_username:  shashwat623
-
+# Custom added fields
+author: Shashwat Dalakoti
 # Build settings
 theme: minima
 plugins:
