@@ -1,5 +1,5 @@
 ---
 layout: page
-title: Installation Guide
+title: Installation
 permalink: /installation/ 
 ---
