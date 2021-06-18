@@ -208,4 +208,27 @@ So I started exploring a few well known object detection models available in the
 </figure>
 
 * * * 
+<br/>
 
+## Brushing up more with the required tech stack
+
+I utilized the remaining days of the community bonding period brushing up and getting more familiar with the following:
+
+* **Version Control Operations and Git commands** - Although I was already quite familiar with git and the related version control paradigm, I still felt I was lacking some commands-related knowledge to work from the shell. All my previous projects on GitHub were mainly contributed by me, so I was still a little rusty with the concepts of branches, when do merge conflicts arise, remote locations naming conventions, good GitHub practices, etc. There were times when I accidentally pulled changes from the remote master branch to some other branch in the cloned repository, resulting in merge conflicts, there were times when I accidentally pushed changes upstream to the main remote repository rather than the forked remote origin, there were times when I accidentally forgot staging changes before committing them, always wondering what caused the error. All this mainly happened because previously I was more used to the pampering GitHub graphical interface to do stuff. I worked on my git skills, learned from my previous mistakes, and realized how flexible and easy git can become if one is familiar with its shell scripting and commands. To be honest, I no longer feel like or even the need of using the graphical interface on GitHub anymore for stuff that can be done from the shell. 
+
+* **Image Processing** - I knew apart from good Deep Learning skills, image processing skills are equally important for projects related to Computer Vision. I started to refer to my previous projects and different articles and videos for the same, picking up relevant information from where ever I could.
+
+* **Fine Tuning and modifying network architecture** - Since our project was focused on uploading the trained Deep Learning models for the particular tasks, I realized asking naive users to build a model from scratch for certain exercises like human detection would sound like an overkill, instead what many people would prefer doing would be to modify some pre-existing trained/untrained network architecture, and fine-tune them according to their liking and requirements of the exercise. For this reason, I started to learn more about this and its feasibility.
+
+* **Understanding the pre-existing code base for the web-template-based exercises** - Next, I spent a day analyzing the pre-existing code base and the general workflow of the exercises based on the web template. Since the newer exercises would also be based on the web template, it was essential to get familiar with its codebase, which would help me build upon the pre-existing workflow. During this time, I also got more familiar with docker containers and how the exercises launched from the front end were being mapped back to the container.
+
+* * * 
+<br/>
+
+### A few extra things done:-
+
+* **ONNXRUNTIME-GPU issue** - Since my laptop did not have any CUDA-supported dedicated GPU, I started playing around with the onnxruntime-gpu library on Google Colab, which provides free GPU runtime. Until now I had only tested and performed inference on the onnxruntime, which is only for CPU. I was planning to implement both the CPU and GPU libraries in the exercise to support both types of users. As it turns out both the onnxruntime and onnxruntime-gpu had the same import name, and by default, the GPU version gets imported if both are installed. The GPU version requires some specific CUDA dll's to be pre-installed, this means non-cuda users would always get an error. I raised an issue for the same on the onnxruntime GitHub page, turns out it was a known issue to the developers and was being taken care of. To know more about it, please refer to my issue [**here**](https://github.com/microsoft/onnxruntime/issues/7930). My mentors and I decided to hold on with the GPU inference support till the issue was solved. I will follow up with this later in the blog :)
+
+* **Solved the static number of consecutive frames issue** - The dl_digit classification exercise followed a policy of a specific number of consecutive detections to be the same to output any detection. This was mainly done to make the detections more accurate and prevent any false positives. The number of consecutive frames to be the same was hardcoded to 20 frames. A constant value for this would result in the Inference time being very specific to what frame rates a user is getting. I helped to make this more dynamic by making the required changes and keeping the value of `n_consecutive_frames` to be dependent on the present value of FPS i.e `n_consecutive_frames = FPS/2`. To know more on this, refer to this [**PR**](https://github.com/JdeRobot/RoboticsAcademy/pull/981).
+
+* **Started building a basic prototype for the Human Detection exercise** - I planned to utilise the last remaining days of the community bonding period to start off with our first exercise implementation. More information on this is provided under Week 1. 

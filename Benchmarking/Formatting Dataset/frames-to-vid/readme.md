@@ -1,0 +1,1 @@
+`frames-to-vid.py` - Contains the code to convert the extracted number of frames back to a video with a specified frame rate. This converted video will then be used as the benchmark video to perform inference on.
