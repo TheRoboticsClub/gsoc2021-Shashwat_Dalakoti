@@ -19,7 +19,7 @@ from websocket_server import WebsocketServer
 
 from gui import GUI, ThreadGUI
 from hal import HAL
-import console
+from console import start_console, close_console
 
 import _init_paths #Set up path for the benchamrking folder 
 # importing required dependencies from benchmarking folder     
@@ -46,18 +46,87 @@ class Template:
         self.client = None
         self.host = sys.argv[1]
 
-        self.aux_model_fname = "dummy.onnx"  # internal name for temporary model uploaded by user
+        self.aux_model_fname = "uploaded_model.onnx"  # internal name for temporary model uploaded by user
 
         # Initialize the GUI, WEBRTC and Console behind the scenes
-        self.console = console.Console()
         self.hal = HAL()
-        self.gui = GUI(self.host, self.console, self.hal)
-        
+        self.gui = GUI(self.host, self.hal)
+        # Saving the current path for later use.
+        # The current path is somehow required everytime for accessing files, when the exercise is running in the docker container
+        self.current_path = os.path.dirname(os.path.abspath(__file__))
+
+    
+    def saveModel(self, raw_dl_model):
+        # Receive model
+        print("Received raw model")
+        raw_dl_model = raw_dl_model.split(",")[-1]
+        raw_dl_model_bytes = raw_dl_model.encode('ascii')
+        raw_dl_model_bytes = base64.b64decode(raw_dl_model_bytes)
+        try:
+            with open(os.path.join(self.current_path, self.aux_model_fname), "wb") as f:
+                f.write(raw_dl_model_bytes)
+            print("Model Uploaded")
+            self.server.send_message(self.client, "#modl")
+        except:
+            print("Error saving model to file")
+
+
+    def saveVideo(self, raw_video):
+        print("Received raw video")
+        try:
+            raw_video = raw_video.split(",")[-1]
+            raw_video_bytes = raw_video.encode('ascii')
+            raw_video_bytes = base64.b64decode(raw_video_bytes)
+            with open(os.path.join(self.current_path, "uploaded_video.mp4"), "wb") as f:
+                f.write(raw_video_bytes)
+                print("Video Uploaded")
+                self.server.send_message(self.client, "#vido")
+        except:
+            print("Error in decoding")
+
+    def display_output_detection(self, img, detections, scores):
+        """Draw box and label for the detections."""
+        # The output detections received from the model are in form [ymin, xmin, ymax, xmax]
+        height, width = img.shape[0], img.shape[1]
+        for i,detection in enumerate(detections):
+            # the box is relative to the image size so we multiply with height and width to get pixels.
+            top = detection[0] * height
+            left = detection[1] * width
+            bottom = detection[2] * height
+            right = detection[3] * width
+            top = max(0, np.floor(top + 0.5).astype('int32'))
+            left = max(0, np.floor(left + 0.5).astype('int32'))
+            bottom = min(height, np.floor(bottom + 0.5).astype('int32'))
+            right = min(width, np.floor(right + 0.5).astype('int32'))
+            cv2.rectangle(img, (left, top), (right, bottom), (0,0,255), 2)
+            cv2.putText(img, 'Human', (left, top-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 1)
+            #cv2.putText(img, str(scores[i])+"%", (left+150, top-10), cv2.FONT_HERSHEY_DUPLEX, 0.4, (255,0,0), 1)
+
+
+    def display_gt_detection(self, img, gt_detections):
+        # The ground truth detections received are in the format [xmin, ymin, xmax, ymax]
+        for gt_detection in gt_detections:
+            left = int(gt_detection[1])
+            top = int(gt_detection[2])
+            right = int(gt_detection[3])
+            bottom = int(gt_detection[4])
+            cv2.rectangle(img, (left, top), (right, bottom), (0,255,0), 2)
+
+
+    def visualizeModel(self):
+        try:
+            netron.start(os.path.join(self.current_path, self.aux_model_fname), address= 8081, browse=False)
+        except Exception:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print(str(exc_value))
+            print("ERROR: Model couldn't be loaded to the visualizer")
+
 
     def video_infer(self):
         # Load ONNX model
         try:
-            sess = rt.InferenceSession(self.aux_model_fname)
+            self.hal.frame_number = 0
+            sess = rt.InferenceSession(os.path.join(self.current_path, self.aux_model_fname))
             # input layer name in the model
             input_layer_name = sess.get_inputs()[0].name
             # list for storing names of output layers of the model
@@ -66,8 +135,8 @@ class Template:
                 output_layers_names.append(sess.get_outputs()[i].name)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
-            self.console.print("ERROR: Model couldn't be loaded")
+            print(str(exc_value))
+            print("ERROR: Model couldn't be loaded")
         try:
             while not self.reload:
                 start_time = datetime.now()
@@ -123,73 +192,11 @@ class Template:
                     time.sleep((self.time_cycle - ms) / 1000.0)
 
             self.hal.frame_number = 0
-            print("Process thread closed!")
+            print("Video infer process thread closed!")
         # To print the errors that the user submitted through the Javascript editor (ACE)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
-
-    
-    def saveModel(self, raw_dl_model):
-        # Receive model
-        raw_dl_model = raw_dl_model.split(",")[-1]
-        raw_dl_model_bytes = raw_dl_model.encode('ascii')
-        raw_dl_model_bytes = base64.b64decode(raw_dl_model_bytes)
-        try:
-            with open(self.aux_model_fname, "wb") as f:
-                f.write(raw_dl_model_bytes)
-        except:
-            self.console.print("Error saving model to file")
-
-
-    def saveVideo(self, raw_video):
-        print("Received raw video")
-        try:
-            raw_video = raw_video.split(",")[-1]
-            raw_video_bytes = raw_video.encode('ascii')
-            raw_video_bytes = base64.b64decode(raw_video_bytes)
-            with open("uploaded_video.mp4", "wb") as f:
-                f.write(raw_video_bytes)
-                print("Video Saved")
-        except:
-            self.console.print("Error in decoding")
-
-    def display_output_detection(self, img, detections, scores):
-        """Draw box and label for the detections."""
-        # The output detections received from the model are in form [ymin, xmin, ymax, xmax]
-        height, width = img.shape[0], img.shape[1]
-        for i,detection in enumerate(detections):
-            # the box is relative to the image size so we multiply with height and width to get pixels.
-            top = detection[0] * height
-            left = detection[1] * width
-            bottom = detection[2] * height
-            right = detection[3] * width
-            top = max(0, np.floor(top + 0.5).astype('int32'))
-            left = max(0, np.floor(left + 0.5).astype('int32'))
-            bottom = min(height, np.floor(bottom + 0.5).astype('int32'))
-            right = min(width, np.floor(right + 0.5).astype('int32'))
-            cv2.rectangle(img, (left, top), (right, bottom), (0,0,255), 2)
-            cv2.putText(img, 'Human', (left, top-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 1)
-            #cv2.putText(img, str(scores[i])+"%", (left+150, top-10), cv2.FONT_HERSHEY_DUPLEX, 0.4, (255,0,0), 1)
-
-
-    def display_gt_detection(self, img, gt_detections):
-        # The ground truth detections received are in the format [xmin, ymin, xmax, ymax]
-        for gt_detection in gt_detections:
-            left = int(gt_detection[1])
-            top = int(gt_detection[2])
-            right = int(gt_detection[3])
-            bottom = int(gt_detection[4])
-            cv2.rectangle(img, (left, top), (right, bottom), (0,255,0), 2)
-
-
-    def visualizeModel(self):
-        try:
-            netron.start(self.aux_model_fname)
-        except Exception:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
-            self.console.print("ERROR: Model couldn't be loaded to the visualizer")
+            print(str(exc_value))
 
 
     # The process function
@@ -197,9 +204,10 @@ class Template:
         """
         Given a DL model in onnx format, yield prediction per frame.
         """
+
         # Load ONNX model
         try:
-            sess = rt.InferenceSession(self.aux_model_fname)
+            sess = rt.InferenceSession(os.path.join(self.current_path, self.aux_model_fname))
             # input layer name in the model
             input_layer_name = sess.get_inputs()[0].name
             # list for storing names of output layers of the model
@@ -208,8 +216,8 @@ class Template:
                 output_layers_names.append(sess.get_outputs()[i].name)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
-            self.console.print("ERROR: Model couldn't be loaded")
+            print(str(exc_value))
+            print("ERROR: Model couldn't be loaded")
 
         try:
             while not self.reload:
@@ -262,12 +270,12 @@ class Template:
                 if (ms < self.time_cycle):
                     time.sleep((self.time_cycle - ms) / 1000.0)
 
-            print("Process thread closed!")
+            print("Live infer process thread closed!")
 
         # To print the errors that the user submitted through the Javascript editor (ACE)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
+            print(str(exc_value))
 
 
     def perform_benchmark(self):
@@ -315,41 +323,34 @@ class Template:
                 prec = ['%.2f' % p for p in precision]
                 rec = ['%.2f' % r for r in recall]
                 ap_str = "{0:.2f}%".format(ap * 100)
-                print('AP: %s (%s)' % (ap_str, cl))
-                f.write('\n\nClass: %s' % cl)
+                # print('AP: %s (%s)' % (ap_str, cl))
+                f.write('\nClass: %s' % cl)
                 f.write('\nAP: %s' % ap_str)
-                f.write('\n\nPrecision: %s' % prec)
-                f.write('\n\n')
-                f.write("*" * 100)
+                f.write('\nPrecision: %s' % prec)
+                f.write('\n')
+                f.write("*" * 40)
                 f.write('\nRecall: %s' % rec)
                 f.write('\n')
-                f.write("*" * 100)
+                f.write("*" * 40)
 
         mAP = acc_AP / validClasses
         mAP_str = "{0:.2f}%".format(mAP * 100)
-        print('mAP: %s' % mAP_str)
+        # print('mAP: %s' % mAP_str)
         f.write('\nmAP: %s' % mAP_str)
         f.close()
+        print("\n" + "#"*10 + "Benchmarking Results" + "#"*10 + "\n")
         f = open(os.path.join(savePath, 'results.txt'), 'r')
-        lines = f.readlines()
-        for line in lines:
-            if(len(line) > 100):
-                start_index = 0
-                end_index = start_index + 100
-                while(end_index <= len(line)):
-                    self.console.print(line[start_index:end_index])
-                    start_index = end_index
-                    end_index = min(end_index+100, len(line))
-                    if(start_index == end_index):
-                        break
-            else:
-                self.console.print(line)
+        for line in f:
+            print(line)
+        print("#"*40)
         f.close()
+
 
     def eval_dl_model(self):
         # Load ONNX model
         try:
-            sess = rt.InferenceSession(self.aux_model_fname)
+            self.hal.frame_number = 0
+            sess = rt.InferenceSession(os.path.join(self.current_path, self.aux_model_fname))
             # input layer name in the model
             input_layer_name = sess.get_inputs()[0].name
             # list for storing names of output layers of the model
@@ -358,8 +359,8 @@ class Template:
                 output_layers_names.append(sess.get_outputs()[i].name)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
-            self.console.print("ERROR: Model couldn't be loaded")
+            print(str(exc_value))
+            print("ERROR: Model couldn't be loaded")
         try:
             while not self.reload:
                 start_time = datetime.now()
@@ -379,7 +380,7 @@ class Template:
                 detections = []
                 scores = []
                 height, width = img.shape[0], img.shape[1]
-                f = open("benchmarking/detections/" + str(frame_number) + ".txt", "w")
+                f = open(self.current_path + "/benchmarking/detections/" + str(frame_number) + ".txt", "w")
                 batch_size = num_detections.shape[0]
                 for batch in range(0, batch_size):
                     for detection in range(0, int(num_detections[batch])):
@@ -428,12 +429,12 @@ class Template:
             
             self.hal.frame_number = 0
             self.perform_benchmark()
-            print("Process thread closed!")
+            print("Benchmarking process thread closed!")
 
         # To print the errors that the user submitted through the Javascript editor (ACE)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.console.print(str(exc_value))
+            print(str(exc_value))
 
 
 
@@ -497,13 +498,15 @@ class Template:
         self.measure_thread = threading.Thread(target=self.measure_frequency)
         if(message == "#infer"):
             self.thread = threading.Thread(target=self.process_dl_model)
+            print("Live infer process thread started!")
         if(message == "#eval"):
             self.thread = threading.Thread(target= self.eval_dl_model)
+            print("Benchmarking process thread started!")
         if(message == "#video_infer"):
             self.thread = threading.Thread(target= self.video_infer)
+            print("Video infer process thread started!")
         self.thread.start()
         self.measure_thread.start()
-        print("Process Thread Started!")
         print("Frequency Thread started!")
 
 
@@ -568,6 +571,7 @@ class Template:
 
     # Function that gets called when the server is connected
     def connected(self, client, server):
+        start_console()
         self.client = client
         # Start the GUI update thread
         self.thread_gui = ThreadGUI(self.gui)
