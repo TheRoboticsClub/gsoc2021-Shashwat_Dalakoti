@@ -9,4 +9,4 @@ The project aims at adding new Computer Vision Exercises to the Robotics Academy
 ## Important Links
 * [**Refer to this link for the code base**](https://github.com/TheRoboticsClub/gsoc2021-Shashwat_Dalakoti)
 * [**Refer to this link for the final exercise docs and working demo**](https://jderobot.github.io/RoboticsAcademy/exercises/ComputerVision/human_detection)
-* [**Link to the Robotics Academy repo**](https://github.com/JdeRobot/RoboticsAcademy)
+* [**Link to the Robotics Academy repository**](https://github.com/JdeRobot/RoboticsAcademy)

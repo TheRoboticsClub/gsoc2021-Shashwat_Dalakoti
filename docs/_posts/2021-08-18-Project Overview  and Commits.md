@@ -34,7 +34,7 @@ src="https://www.youtube.com/embed/vn4ahq8mElg">
 
 ## To Do
 
-* Providing support for GPU inference.
+* Providing support for GPU and CPU inference from a common docker image
 
 ## Merged PR's 
 
@@ -47,7 +47,8 @@ src="https://www.youtube.com/embed/vn4ahq8mElg">
 * [Updated Human Detection exercise docs #1123](https://github.com/JdeRobot/RoboticsAcademy/pull/1123)
 * [**Updated Human Detection Exercise to Version 2 #1174**](https://github.com/JdeRobot/RoboticsAcademy/pull/1174)
 * [Updated start_console() point in human_detection exercise #1193](https://github.com/JdeRobot/RoboticsAcademy/pull/1193)
-* [Updated Human Detection exercise webpage #1201](https://github.com/JdeRobot/RoboticsAcademy/pull/1201)   
+* [Updated Human Detection exercise webpage #1201](https://github.com/JdeRobot/RoboticsAcademy/pull/1201)
+* [Code clean-up #1230](https://github.com/JdeRobot/RoboticsAcademy/pull/1230)
 
 ## Extras
 
